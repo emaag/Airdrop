@@ -1,5 +1,4 @@
 ==Meet Airdrop==
 Airdrop is an automatic WordPress deployment script. Put it where you want WordPress installed, and open it in your browser.
 
-==Upcoming features==
-In the next few weeks, Airdrop will also download your plugins and themes automatically, allowing for quick and painless batch installs.
+On top of being much faster, Airdrop also downloads your WordPress themes automatically.
