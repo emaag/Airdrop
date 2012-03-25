@@ -3,30 +3,34 @@
 *	Airdrop for WordPress 
 *	By Nicolas Bouliane
 */
+
 if ( isset($_GET['install']) && $_GET['install']=='1' ){
+	//Make sure all options are set
 	$setup_options = array(
+		'blog_title'=> isset($_GET['blog_title'])?$_GET['blog_title']:'My blog',
+		'blog_user'=> isset($_GET['blog_user'])?$_GET['blog_user']:'admin',
+		'blog_email'=> isset($_GET['blog_email'])?$_GET['blog_email']:'',
+		'blog_pass'=> isset($_GET['blog_pass'])?$_GET['blog_pass']:'123456',
+		
 		'db_name'=> isset($_GET['db_name'])?$_GET['db_name']:'',
 		'db_user'=> isset($_GET['db_user'])?$_GET['db_user']:'',
 		'db_pass'=> isset($_GET['db_pass'])?$_GET['db_pass']:'',
+		
 		'lang'=> isset($_GET['lang'])?$_GET['lang']:'en_US',
-		'debug'=> (isset($_GET['debug']))?'true':'false',	
+		'debug'=> (isset($_GET['debug']))?'true':'false',
+		'is_public'=> (isset($_GET['is_public']))?true:false,
 		'plugins'=> (isset($_GET['plugins']))?urldecode($_GET['plugins']):''
 	);
 	
-	installWordpress($setup_options);
-}
-
-function installWordPress($options){
 	//Download and extract WordPress
 		downloadFile('http://wordpress.org/latest.zip','wordpress.zip');
-		
 		extractZip('wordpress.zip');
 		
-	//Configure WordPress
-		configureWordPress($options);
+	//Configure WordPress' wp-config.php
+		configureWordPress($setup_options);
 		
-	//Download plugins
-		$slugs = explode(',',$options['plugins']);
+	//Download selected plugins
+		$slugs = explode(',',$setup_options['plugins']);
 		foreach($slugs as $slug)
 			configurePlugin(trim($slug),dirname(__FILE__).'/wordpress');
 	
@@ -34,7 +38,7 @@ function installWordPress($options){
 	*  to take everything out, move it to a temp directory, then move it back in
 	*  the parent directory, since moving it directly to a non-empty folder would
 	*  throw errors. */
-	
+			
 	//Clean the directory (both necessary and safer)
 		unlink('wordpress.zip'); //Remove the .zip
 		unlink(__FILE__); //Remove this script
@@ -42,8 +46,22 @@ function installWordPress($options){
 	//Move everything to a temp folder, then back in the directory.
 		rename(dirname(__FILE__).'/wordpress',dirname(__FILE__).'/../tmp');
 		rename(dirname(__FILE__).'/../tmp',dirname(__FILE__).'/');
+	
+	//Let WordPress create the tables and users
+		chdir(dirname(__FILE__));
+		define('WP_INSTALLING', true);
+		require_once 'wp-load.php';
+		require_once 'wp-admin/includes/upgrade.php';
+		require_once 'wp-includes/wp-db.php';
+		
+		//Set the site URL. Otherwise, WordPress will think it's this file's URL
+		define('WP_SITEURL', siteUrl());
+
+		//Install WordPress
+		wp_install($setup_options['blog_title'], $setup_options['blog_user'], $setup_options['blog_email'], true, null, $setup_options['blog_pass']);
 }
 
+//Fills wp-config.php
 function configureWordPress($options){
 	//Make sure all options are correctly defined
 		$options = array(
@@ -79,6 +97,7 @@ function configureWordPress($options){
 		fwrite($file_pointer_new, $wpconfig, strlen($wpconfig));
 }
 
+//Extracts a zip file
 function extractZip($file,$destination=''){
 	$zip = new ZipArchive();
 	
@@ -92,6 +111,7 @@ function extractZip($file,$destination=''){
 	}
 }
 
+//Downloads a file
 function downloadFile($url,$localfile){
 	//Initialize curl
 		$curl = curl_init();
@@ -111,6 +131,7 @@ function downloadFile($url,$localfile){
 		fclose($file_pointer);
 }
 
+//Downloads, extracts and configures plugins
 function configurePlugin($slug,$plugins_path){
 	//Download the plugin
 		downloadFile('http://downloads.wordpress.org/plugin/'.$slug.'.zip', $slug.'.zip');
@@ -120,6 +141,13 @@ function configurePlugin($slug,$plugins_path){
 		
 	//Delete the .zip
 		unlink($slug.'.zip');
+}
+
+//Guesses the root URL
+function siteUrl(){
+	$page_url = wp_guess_url();//WordPress uses this function to find the site's URL
+	$site_url = substr($page_url, 0, strpos($page_url,'/install.php'));//Only keep the part before the page URL
+	return $site_url;
 }
 ?>
 <!DOCTYPE html>
@@ -133,7 +161,6 @@ function configurePlugin($slug,$plugins_path){
 			$('#step2').hide();
 			$('#go').click(function(){
 				$('#go').hide();
-				alert($('form').serialize());
 				$('#loading').show();
 				$.ajax({
 						type: "GET",
@@ -142,7 +169,6 @@ function configurePlugin($slug,$plugins_path){
 					}).done(function(msg) {
 						$('#loading').hide();
 						$('#step2').fadeIn();
-						alert(msg);
 					});
 			});
 			
@@ -177,9 +203,13 @@ function configurePlugin($slug,$plugins_path){
 			<h1>Airdrop</h1>
 			<p class="subtitle">Simple WordPress deployment</p>
 			<p class="info">Airdrop automates WordPress installation from the download to the database setup. Fill this form, sit back and enjoy the show!</p>
-			<p><label for="db_name">MySQL name: </label><input type="text" name="db_name" id="db_name"/></p>
-			<p><label for="db_user">MySQL user: </label><input type="text" name="db_user" id="db_user"/></p>
-			<p><label for="db_pass">MySQL password: </label><input type="password" name="db_pass" id="db_pass"/></p>
+			<p><label for="db_name">Database name: </label><input type="text" name="db_name" id="db_name"/></p>
+			<p><label for="db_user">Database user: </label><input type="text" name="db_user" id="db_user"/></p>
+			<p><label for="db_pass">Database password: </label><input type="password" name="db_pass" id="db_pass"/></p>
+			<p><label for="blog_user">Wordpress admin username: </label><input type="text" name="blog_user" id="blog_user" value="admin"/></p>
+			<p><label for="blog_email">Wordpress admin email: </label><input type="text" name="blog_email" id="blog_email"/></p>
+			<p><label for="blog_pass">Wordpress admin password: </label><input type="password" name="blog_pass" id="blog_pass"/></p>
+			<p><label for="blog_title">Site title: </label><input type="text" name="blog_title" id="blog_title"/></p>
 			<p><label for="lang">Language: </label><input type="text" name="lang" id="lang" value="en_US"/></p>
 			<p><label for="debug">Enable debugging: </label><input type="checkbox" name="debug" id="debug"/><span id='debughelp-button' class='helpbutton'>?</span></p>
 				<p id='debughelp' class='help'>Enabling debugging will allow WordPress to show errors on the site. Although useful when developing a site, this should be disabled on the production server.</p>
@@ -193,7 +223,7 @@ function configurePlugin($slug,$plugins_path){
 			</div>
 		</div>
 		<div id="step2">
-			Done! <a href="wp-admin/install.php">Click here to continue to WordPress</a>.
+			Done! <a href="wp-admin">Click here to go to your site's dashboard</a>.
 		</div>
 		<input type="hidden" name="install" value="1"/>
 	</form>
