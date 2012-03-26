@@ -59,6 +59,19 @@ if ( isset($_GET['install']) && $_GET['install']=='1' ){
 
 		//Install WordPress
 		wp_install($setup_options['blog_title'], $setup_options['blog_user'], $setup_options['blog_email'], true, null, $setup_options['blog_pass']);
+		
+	//Activate all installed plugins
+		require_once 'wp-admin/includes/plugin.php';
+		
+		//Convert slugs to qualified plugin names
+		$plugins = array();
+		foreach($slugs as $slug){
+			$slug = trim($slug);
+			array_push($plugins, "$slug.php", "$slug/$slug.php");//Plugins can be in a folder or standalone
+		}
+		
+		//Activate all plugins
+		activate_plugins($plugins,'',false,true);
 }
 
 //Fills wp-config.php
@@ -132,28 +145,32 @@ function downloadFile($url,$localfile){
 }
 
 //Downloads, extracts and configures plugins
-function configurePlugin($slug,$plugins_path){
+function configurePlugin($slug,$plugin_path){
 	//Download the plugin
 		downloadFile('http://downloads.wordpress.org/plugin/'.$slug.'.zip', $slug.'.zip');
 	
 	//Extract the plugin
-		extractZip($slug.'.zip', $plugins_path.'/wp-content/plugins');
+		extractZip($slug.'.zip', $plugin_path.'/wp-content/plugins');
 		
 	//Delete the .zip
 		unlink($slug.'.zip');
 }
 
-//Guesses the root URL
+//Guesses the site's root URL (utility)
 function siteUrl(){
 	$page_url = wp_guess_url();//WordPress uses this function to find the site's URL
 	$site_url = substr($page_url, 0, strpos($page_url,'/install.php'));//Only keep the part before the page URL
 	return $site_url;
 }
+
+
+if ( !isset($_GET['install']) || $_GET['install']!='1'):
 ?>
 <!DOCTYPE html>
 <html>
 <head>
 	<title>Airdrop for WordPress</title>
+	<meta name="robots" content="noindex,follow"/>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
 	<script type="text/javascript">
 		$(document).ready(function(){
@@ -167,6 +184,8 @@ function siteUrl(){
 						url: "install.php",
 						data: $('form').serialize()
 					}).done(function(msg) {
+						if ( msg.length > 0 )
+							$('#step2').html(msg);
 						$('#loading').hide();
 						$('#step2').fadeIn();
 					});
@@ -230,3 +249,4 @@ function siteUrl(){
 	<p id="footer"><a href="http://inoui.ca">Made by Inoui</a></p>
 </body>
 </html>
+<?php endif;?>
