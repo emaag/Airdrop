@@ -73,7 +73,7 @@ if ( isset($_GET['install']) && $_GET['install']=='1' ){
 		}
 		
 		//Activate all plugins
-		activate_plugins($plugins,'',false,true);
+		@activate_plugins($plugins,'',false,true);
 		
 	//Set other WordPress options
 		//Blog description
