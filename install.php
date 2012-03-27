@@ -8,6 +8,7 @@ if ( isset($_GET['install']) && $_GET['install']=='1' ){
 	//Make sure all options are set
 	$setup_options = array(
 		'blog_title'=> isset($_GET['blog_title'])?$_GET['blog_title']:'My blog',
+		'blog_desc'=> isset($_GET['blog_desc'])?$_GET['blog_desc']:'My blog',
 		'blog_user'=> isset($_GET['blog_user'])?$_GET['blog_user']:'admin',
 		'blog_email'=> isset($_GET['blog_email'])?$_GET['blog_email']:'',
 		'blog_pass'=> isset($_GET['blog_pass'])?$_GET['blog_pass']:'123456',
@@ -18,6 +19,7 @@ if ( isset($_GET['install']) && $_GET['install']=='1' ){
 		
 		'lang'=> isset($_GET['lang'])?$_GET['lang']:'en_US',
 		'debug'=> (isset($_GET['debug']))?'true':'false',
+		'enable_comments'=> (isset($_GET['enable_comments']))?'open':'closed',
 		'is_public'=> (isset($_GET['is_public']))?true:false,
 		'plugins'=> (isset($_GET['plugins']))?urldecode($_GET['plugins']):''
 	);
@@ -58,7 +60,7 @@ if ( isset($_GET['install']) && $_GET['install']=='1' ){
 		define('WP_SITEURL', siteUrl());
 
 		//Install WordPress
-		wp_install($setup_options['blog_title'], $setup_options['blog_user'], $setup_options['blog_email'], true, null, $setup_options['blog_pass']);
+		wp_install($setup_options['blog_title'], $setup_options['blog_user'], $setup_options['blog_email'], $setup_options['is_public'], null, $setup_options['blog_pass']);
 		
 	//Activate all installed plugins
 		require_once 'wp-admin/includes/plugin.php';
@@ -72,6 +74,13 @@ if ( isset($_GET['install']) && $_GET['install']=='1' ){
 		
 		//Activate all plugins
 		activate_plugins($plugins,'',false,true);
+		
+	//Set other WordPress options
+		//Blog description
+		update_option('blogdescription',$setup_options['blog_desc']);
+		
+		//Enable/disable comments
+		update_option('blogdescription',$setup_options['enable_comments']);
 }
 
 //Fills wp-config.php
@@ -171,6 +180,7 @@ if ( !isset($_GET['install']) || $_GET['install']!='1'):
 <head>
 	<title>Airdrop for WordPress</title>
 	<meta name="robots" content="noindex,follow"/>
+	<meta http-equiv="content-type" content="text/html;charset=UTF-8"/>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
 	<script type="text/javascript">
 		$(document).ready(function(){
@@ -201,6 +211,7 @@ if ( !isset($_GET['install']) || $_GET['install']!='1'):
 	<style type="text/css">
 		body{background:#eee;margin:0}
 		body,input,textarea{font:16px/26px sans-serif}
+		hr{margin:40px 0;border:0;border-top:1px solid #ddd}
 		#wrapper{width:600px;padding:25px 50px 50px;margin:0 auto;background:#fff}
 		h1{line-height:76px!important;margin:0;padding:0;font-size:76px;letter-spacing:-2px}
 		p.subtitle{margin-top:-17px;padding-top:0}
@@ -208,8 +219,8 @@ if ( !isset($_GET['install']) || $_GET['install']!='1'):
 		p.help{display:none}
 			span.helpbutton{background:#eef;padding:2px 5px;border-radius:20px;cursor:pointer}
 		input,textarea{width:594px;display:block;padding:3px}
-		input#debug{width:auto;display:inline}
-		textarea{height:200px}
+		input.checkbox{width:auto;display:inline}
+		textarea{height:100px}
 		#go{display:block;color:#fff;background:#77f;margin:20px auto 0;padding:10px 0;text-align:center;width:200px;cursor:pointer;border:1px solid #66e;text-shadow:0 -1px 0 #33d;border-radius:30px}
 		#go:active{background:#33a;border-color:#33a}
 		#footer{text-align:center}
@@ -225,16 +236,24 @@ if ( !isset($_GET['install']) || $_GET['install']!='1'):
 			<p><label for="db_name">Database name: </label><input type="text" name="db_name" id="db_name"/></p>
 			<p><label for="db_user">Database user: </label><input type="text" name="db_user" id="db_user"/></p>
 			<p><label for="db_pass">Database password: </label><input type="password" name="db_pass" id="db_pass"/></p>
+			<hr />
 			<p><label for="blog_user">Wordpress admin username: </label><input type="text" name="blog_user" id="blog_user" value="admin"/></p>
-			<p><label for="blog_email">Wordpress admin email: </label><input type="text" name="blog_email" id="blog_email"/></p>
 			<p><label for="blog_pass">Wordpress admin password: </label><input type="password" name="blog_pass" id="blog_pass"/></p>
-			<p><label for="blog_title">Site title: </label><input type="text" name="blog_title" id="blog_title"/></p>
-			<p><label for="lang">Language: </label><input type="text" name="lang" id="lang" value="en_US"/></p>
-			<p><label for="debug">Enable debugging: </label><input type="checkbox" name="debug" id="debug"/><span id='debughelp-button' class='helpbutton'>?</span></p>
-				<p id='debughelp' class='help'>Enabling debugging will allow WordPress to show errors on the site. Although useful when developing a site, this should be disabled on the production server.</p>
+			<p><label for="blog_email">Wordpress admin email: </label><input type="text" name="blog_email" id="blog_email"/></p>
+			<hr />
+			<p><label for="blog_title">Blog title: </label><input type="text" name="blog_title" id="blog_title"/></p>
+			<label for="blog_desc">Blog description: </label>
+			<textarea name="blog_desc" id="blog_desc">Just another WordPress blog</textarea>
+			<p><label for="lang">Blog language: </label><input type="text" name="lang" id="lang" value="en_US"/></p>
+			<hr />
 			<label for="plugins">Plugins to install (slugs separated by a comma): </label><span id='pluginhelp-button' class='helpbutton'>?</span>
 				<p id='pluginhelp' class='help'>Slugs are used to identify themes. You can find them in the plugin page's URL. For example: http://wordpress.org/extend/plugins/<b>tumblr-importer</b>/</p>
 			<textarea name="plugins" id="plugins">wordpress-importer, w3-total-cache, qtranslate</textarea></p>
+			<p><label for="is_public">Make the blog visible to search engines: </label><input class="checkbox" type="checkbox" checked="checked" name="is_public" id="is_public"/></p>
+			<p><label for="enable_comments">Enable comments: </label><input class="checkbox" type="checkbox" checked="checked" name="enable_comments" id="enable_comments"/><span id='commentshelp-button' class='helpbutton'>?</span></p>
+				<p id='commentshelp' class='help'>Disabling comments will remove the users' ability to comment on posts.</p>
+			<p><label for="debug">Enable debugging: </label><input class="checkbox" type="checkbox" name="debug" id="debug"/><span id='debughelp-button' class='helpbutton'>?</span></p>
+				<p id='debughelp' class='help'>Enabling debugging will allow WordPress to show errors on the site. Although useful when developing a site, this should be disabled on the production server.</p>
 			<a id="go">Install WordPress!</a>
 			<div id="loading">
 				<img src="data:image/jpg;base64,R0lGODlhEAAQAPYAAP///wAAAPr6+pKSkoiIiO7u7sjIyNjY2J6engAAAI6OjsbGxjIyMlJSUuzs7KamppSUlPLy8oKCghwcHLKysqSkpJqamvT09Pj4+KioqM7OzkRERAwMDGBgYN7e3ujo6Ly8vCoqKjY2NkZGRtTU1MTExDw8PE5OTj4+PkhISNDQ0MrKylpaWrS0tOrq6nBwcKysrLi4uLq6ul5eXlxcXGJiYoaGhuDg4H5+fvz8/KKiohgYGCwsLFZWVgQEBFBQUMzMzDg4OFhYWBoaGvDw8NbW1pycnOLi4ubm5kBAQKqqqiQkJCAgIK6urnJyckpKSjQ0NGpqatLS0sDAwCYmJnx8fEJCQlRUVAoKCggICLCwsOTk5ExMTPb29ra2tmZmZmhoaNzc3KCgoBISEiIiIgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH+GkNyZWF0ZWQgd2l0aCBhamF4bG9hZC5pbmZvACH5BAAIAAAAIf8LTkVUU0NBUEUyLjADAQAAACwAAAAAEAAQAAAHaIAAgoMgIiYlg4kACxIaACEJCSiKggYMCRselwkpghGJBJEcFgsjJyoAGBmfggcNEx0flBiKDhQFlIoCCA+5lAORFb4AJIihCRbDxQAFChAXw9HSqb60iREZ1omqrIPdJCTe0SWI09GBACH5BAAIAAEALAAAAAAQABAAAAdrgACCgwc0NTeDiYozCQkvOTo9GTmDKy8aFy+NOBA7CTswgywJDTIuEjYFIY0JNYMtKTEFiRU8Pjwygy4ws4owPyCKwsMAJSTEgiQlgsbIAMrO0dKDGMTViREZ14kYGRGK38nHguHEJcvTyIEAIfkEAAgAAgAsAAAAABAAEAAAB2iAAIKDAggPg4iJAAMJCRUAJRIqiRGCBI0WQEEJJkWDERkYAAUKEBc4Po1GiKKJHkJDNEeKig4URLS0ICImJZAkuQAhjSi/wQyNKcGDCyMnk8u5rYrTgqDVghgZlYjcACTA1sslvtHRgQAh+QQACAADACwAAAAAEAAQAAAHZ4AAgoOEhYaCJSWHgxGDJCQARAtOUoQRGRiFD0kJUYWZhUhKT1OLhR8wBaaFBzQ1NwAlkIszCQkvsbOHL7Y4q4IuEjaqq0ZQD5+GEEsJTDCMmIUhtgk1lo6QFUwJVDKLiYJNUd6/hoEAIfkEAAgABAAsAAAAABAAEAAAB2iAAIKDhIWGgiUlh4MRgyQkjIURGRiGGBmNhJWHm4uen4ICCA+IkIsDCQkVACWmhwSpFqAABQoQF6ALTkWFnYMrVlhWvIKTlSAiJiVVPqlGhJkhqShHV1lCW4cMqSkAR1ofiwsjJyqGgQAh+QQACAAFACwAAAAAEAAQAAAHZ4AAgoOEhYaCJSWHgxGDJCSMhREZGIYYGY2ElYebi56fhyWQniSKAKKfpaCLFlAPhl0gXYNGEwkhGYREUywag1wJwSkHNDU3D0kJYIMZQwk8MjPBLx9eXwuETVEyAC/BOKsuEjYFhoEAIfkEAAgABgAsAAAAABAAEAAAB2eAAIKDhIWGgiUlh4MRgyQkjIURGRiGGBmNhJWHm4ueICImip6CIQkJKJ4kigynKaqKCyMnKqSEK05StgAGQRxPYZaENqccFgIID4KXmQBhXFkzDgOnFYLNgltaSAAEpxa7BQoQF4aBACH5BAAIAAcALAAAAAAQABAAAAdogACCg4SFggJiPUqCJSWGgkZjCUwZACQkgxGEXAmdT4UYGZqCGWQ+IjKGGIUwPzGPhAc0NTewhDOdL7Ykji+dOLuOLhI2BbaFETICx4MlQitdqoUsCQ2vhKGjglNfU0SWmILaj43M5oEAOwAAAAAAAAAAAA==" />
